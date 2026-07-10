@@ -1,0 +1,17 @@
+.venv/
+venv/
+env/
+
+qdrant_db/
+
+__pycache__/
+*.pyc
+.cache/
+
+test.py
+data/reference/
+*.png
+*.jpg
+*.jpeg
+
+.env
