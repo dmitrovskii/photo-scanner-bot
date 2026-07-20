@@ -9,8 +9,7 @@ from pathlib import Path
 
 model = SentenceTransformer("clip-ViT-B-32", device="cpu")
 
-def get_image_embedding(image_path: str | Path) -> list:
-    result = Image.open(str(image_path))
-    embeddings = model.encode(result)
+def get_image_embedding(image: Image.Image) -> list:
+    embeddings = model.encode(image)
     return embeddings.tolist()
 

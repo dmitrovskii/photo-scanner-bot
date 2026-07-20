@@ -9,11 +9,12 @@ from aiogram.fsm.context import FSMContext
 from database import add_item, search_items
 from models import get_image_embedding
 
+from io import BytesIO
+from PIL import Image
+
 select_router = Router()
 BASE_DIR = Path(__file__).resolve().parent.parent
 REF = BASE_DIR / "data" / "reference"
-TEST = BASE_DIR / "data" / "temp"
-
 
 async def download_photo(file_id: str, bot: Bot, dest_path: Path = REF):
     destination_path = dest_path / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
@@ -28,7 +29,8 @@ async def download_photo(file_id: str, bot: Bot, dest_path: Path = REF):
 # ADD EMBEDDING
 async def add_embedding(file_id: str, bot: Bot):
     photo_path = REF / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
-    vector = await asyncio.to_thread(get_image_embedding, photo_path)
+    image = Image.open(photo_path)
+    vector = await asyncio.to_thread(get_image_embedding, image)
     await asyncio.to_thread(
         add_item,
         tg_file_id=file_id,
@@ -37,9 +39,8 @@ async def add_embedding(file_id: str, bot: Bot):
     )
 
 # SEARCH EMBEDDING
-async def search_embedding(file_id: str, bot: Bot):
-    photo_path = TEST / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
-    vector = await asyncio.to_thread(get_image_embedding, photo_path)
+async def search_embedding(image: Image.Image, bot: Bot):
+    vector = await asyncio.to_thread(get_image_embedding, image)
     result = await asyncio.to_thread(search_items, vector_search=vector)
     return result
 
@@ -82,15 +83,18 @@ async def button_search(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_data = await state.get_data()  # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
     file_id = user_data.get("photo_id") # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
     if file_id:
-        temp_photo_path = await download_photo(file_id=file_id, bot=bot, dest_path=TEST)
-        results = await search_embedding(file_id=file_id, bot=bot) 
+
+        buffer = BytesIO()
+        await bot.download(file=file_id, destination=buffer)
+        buffer.seek(0)
+        image = Image.open(buffer)
+
+        results = await search_embedding(image=image, bot=bot) 
         if results and results.points:
             best_match = results.points[0]
 
             if best_match.score < 0.60:
                 await callback.message.answer("Схоже, таких предметів у нас немає.")
-                if Path(temp_photo_path).exists(): # TODO: ЗРОБИТИ ОКРЕМИМ МОДУЛЕМ UNLINK()
-                    Path(temp_photo_path).unlink()
                 return 
 
             if best_match.payload is not None:
@@ -118,6 +122,3 @@ async def button_search(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.message.answer("Щось зламалося! Будь ласка, надішліть фото ще раз.")
     
     # TODO: ЗАНАДТО БАГАТО IF ELSE
-
-    if Path(temp_photo_path).exists(): # TODO: ЗРОБИТИ ОКРЕМИМ МОДУЛЕМ UNLINK()
-        Path(temp_photo_path).unlink()
