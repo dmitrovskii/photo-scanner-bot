@@ -31,8 +31,7 @@ async def add_embedding(file_id: str, bot: Bot):
     photo_path = REF / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
     image = Image.open(photo_path)
     vector = await asyncio.to_thread(get_image_embedding, image)
-    await asyncio.to_thread(
-        add_item,
+    await add_item(
         tg_file_id=file_id,
         vector=vector, 
         photo_path=photo_path
@@ -41,7 +40,7 @@ async def add_embedding(file_id: str, bot: Bot):
 # SEARCH EMBEDDING
 async def search_embedding(image: Image.Image, bot: Bot):
     vector = await asyncio.to_thread(get_image_embedding, image)
-    result = await asyncio.to_thread(search_items, vector_search=vector)
+    result = await search_items(vector=vector)
     return result
 
 # MAIN SELECT ROUTER
