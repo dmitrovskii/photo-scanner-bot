@@ -2,7 +2,7 @@
 venv/
 env/
 
-qdrant_db/
+data/qdrant_storage
 
 __pycache__/
 *.pyc

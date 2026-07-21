@@ -19,12 +19,12 @@ async def cmd_start(message: Message):
     await message.answer("Привіт. Я зберігаю та шукаю фотографії. Будь ласка, надсилайте по одній фотографії за раз.")
 
 async def main():
-    init_db()
+    await init_db()
     print(">>> Start...")
     try:
         await dp.start_polling(bot)
     finally:
         print(">>> Stop.")
-        close_db()
+        await close_db()
 if __name__ == "__main__":
     asyncio.run(main())
