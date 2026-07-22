@@ -7,9 +7,9 @@ from aiogram.types import Message
 
 from . import handlers
 from database import init_db, close_db
-from config import BOT_TOKEN
+from config import config
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=config.bot_token)
 dp = Dispatcher()
 
 dp.include_router(handlers.select_router)
