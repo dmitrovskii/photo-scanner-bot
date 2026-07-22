@@ -1,19 +1,28 @@
-import os
-from dotenv import load_dotenv
+import sys
 from pathlib import Path
+from pydantic import ValidationError
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
-ENV_PATH = BASE_DIR / ".env"
+ENV = BASE_DIR / ".env"
 
-load_dotenv(dotenv_path=ENV_PATH)
+class Settings(BaseSettings):
+    bot_token: str
+    qdrant_url: str
 
-_raw_token = os.getenv("BOT_TOKEN") 
-_raw_url_qdrant = os.getenv("QDRANT_URL")
+    model_config = SettingsConfigDict(
+        env_file=ENV,
+        env_file_encoding="utf-8"
+    )
 
-if not _raw_token:
-    raise ValueError("Error: BOT_TOKEN not found!")
-if not _raw_url_qdrant: 
-    raise ValueError("Error: QDRANT_URL not found!")
+try:
+    config = Settings() # type: ignore
+except ValidationError as e:
+    print("\n[ENV ERROR] Перевірте файл .env. Відсутні обов'язкові змінні оточення:")
 
-BOT_TOKEN: str = _raw_token
-QDRANT_URL: str = _raw_url_qdrant
+    for error in e.errors(): 
+        field_name = str(error["loc"][0])
+        print(f"    - {field_name.upper()}")
+
+    print("\n>>> Stop.")
+    sys.exit(1)

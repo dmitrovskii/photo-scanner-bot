@@ -3,9 +3,9 @@ from pathlib import Path
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
-from config import QDRANT_URL
+from config import config
 
-client = AsyncQdrantClient(url=QDRANT_URL)
+client = AsyncQdrantClient(url=config.qdrant_url)
 COLLECTION_NAME = "photo"
 
 def create_uuid(file_name: str) -> str:
