@@ -3,13 +3,20 @@ import os
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
-from sentence_transformers import SentenceTransformer
+import torch
 from PIL import Image
-from pathlib import Path
+from transformers import AutoImageProcessor, AutoModel
 
-model = SentenceTransformer("clip-ViT-B-32", device="cpu")
+MODEL_NAME = "facebook/dinov2-base"
+processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
+model = AutoModel.from_pretrained(MODEL_NAME)
+
+model.eval()
 
 def get_image_embedding(image: Image.Image) -> list:
-    embeddings = model.encode(image)
-    return embeddings.tolist()
-
+    result = image.convert("RGB")
+    inputs = processor(images=result, return_tensors="pt")
+    with torch.no_grad():
+        outputs = model(**inputs)
+        embedding = outputs.last_hidden_state[:, 0, :].squeeze().tolist()
+    return embedding

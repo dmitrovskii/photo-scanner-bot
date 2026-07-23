@@ -17,7 +17,7 @@ async def init_db():
     if not await client.collection_exists(COLLECTION_NAME):
         await client.create_collection(
             collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=512, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=768, distance=Distance.COSINE),
         )
 
 async def add_item(tg_file_id: str, vector: list, photo_path: str | Path):
