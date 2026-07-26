@@ -1,4 +1,3 @@
-import asyncio
 # TODO: ПРАВИЛЬНО НАЛАШТУВАТИ ІМПОРТИ, НАРАЗІ НЕ ГАРНО
 from pathlib import Path
 from aiogram import Router, Bot, F
@@ -6,13 +5,12 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, FSInputF
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 
-from database import add_item, search_items
-from models import get_image_embedding
-
-from io import BytesIO
-from PIL import Image
+from core.database import add_item, search_items
+from core.api_client import EmbeddingApiClient
 
 select_router = Router()
+api_client = EmbeddingApiClient()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 REF = BASE_DIR / "data" / "reference"
 
@@ -28,18 +26,18 @@ async def download_photo(file_id: str, bot: Bot, dest_path: Path = REF):
 
 # ADD EMBEDDING
 async def add_embedding(file_id: str, bot: Bot):
-    photo_path = REF / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
-    image = Image.open(photo_path)
-    vector = await asyncio.to_thread(get_image_embedding, image)
+    file = await bot.download(file=file_id)
+    vector = await api_client.get_image_embedding(image_bytes=file.read())
     await add_item(
         tg_file_id=file_id,
         vector=vector, 
-        photo_path=photo_path
+        photo_path=REF / f"{file_id}.jpg"
     )
 
 # SEARCH EMBEDDING
-async def search_embedding(image: Image.Image, bot: Bot):
-    vector = await asyncio.to_thread(get_image_embedding, image)
+async def search_embedding(file_id, bot: Bot):
+    file = await bot.download(file=file_id)
+    vector = await api_client.get_image_embedding(image_bytes=file.read())
     result = await search_items(vector=vector)
     return result
 
@@ -82,13 +80,7 @@ async def button_search(callback: CallbackQuery, state: FSMContext, bot: Bot):
     user_data = await state.get_data()  # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
     file_id = user_data.get("photo_id") # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
     if file_id:
-
-        buffer = BytesIO()
-        await bot.download(file=file_id, destination=buffer)
-        buffer.seek(0)
-        image = Image.open(buffer)
-
-        results = await search_embedding(image=image, bot=bot) 
+        results = await search_embedding(file_id=file_id, bot=bot) 
         if results and results.points:
             best_match = results.points[0]
 

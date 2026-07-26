@@ -6,7 +6,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from . import handlers
-from database import init_db, close_db
+from core.database import init_db, close_db
 from config import config
 
 bot = Bot(token=config.bot_token)
