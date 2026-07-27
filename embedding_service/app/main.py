@@ -2,7 +2,7 @@ from io import BytesIO
 from PIL import Image
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
-from app.models import EmbeddingService
+from embedding_service.app.models import EmbeddingService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
