@@ -1,60 +1,24 @@
-# TODO: ПРАВИЛЬНО НАЛАШТУВАТИ ІМПОРТИ, НАРАЗІ НЕ ГАРНО
-from pathlib import Path
 from aiogram import Router, Bot, F
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, FSInputFile
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
-from core.database import add_item, search_items
-from core.api_client import EmbeddingApiClient
+from bot.utils import text_to_callback, photo_to_callback
+from bot.buttons import get_selection_buttons
+from bot.service import process_add_photo, process_search_photo
 
 select_router = Router()
-api_client = EmbeddingApiClient()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-REF = BASE_DIR / "data" / "reference"
-
-async def download_photo(file_id: str, bot: Bot, dest_path: Path = REF):
-    destination_path = dest_path / f"{file_id}.jpg" # TODO: ВИНЕСТИ ЙОГО ОКРЕМО
-    destination_path.parent.mkdir(parents=True, exist_ok=True)    
-    
-    await bot.download(
-        file = file_id,
-        destination=destination_path
-    )
-    return destination_path
-
-# ADD EMBEDDING
-async def add_embedding(file_id: str, bot: Bot):
-    file = await bot.download(file=file_id)
-    vector = await api_client.get_image_embedding(image_bytes=file.read())
-    await add_item(
-        tg_file_id=file_id,
-        vector=vector, 
-        photo_path=REF / f"{file_id}.jpg"
-    )
-
-# SEARCH EMBEDDING
-async def search_embedding(file_id, bot: Bot):
-    file = await bot.download(file=file_id)
-    vector = await api_client.get_image_embedding(image_bytes=file.read())
-    result = await search_items(vector=vector)
-    return result
-
-# MAIN SELECT ROUTER
 @select_router.message(F.photo)
 async def selection_menu(message: Message, state: FSMContext):
-    builder = InlineKeyboardBuilder() # TODO: ДОДАТИ ПЕРЕВІРКУ ЮЗЕР ID ДЛЯ АДМІНІСТРАТОРІВ
-    builder.add(
-        InlineKeyboardButton(text="⬇️ Зберегти", callback_data="button_add"),
-        InlineKeyboardButton(text="🔍 Знайти", callback_data="button_search")
-    )
-    if not message.photo: return 
+    if not message.photo:
+        return
+     
     largest_photo = message.photo[-1] 
     await state.update_data(photo_id=largest_photo.file_id)
+
     await message.answer(
         text="Спіймав! Що робимо далі?",
-        reply_markup=builder.as_markup()
+        reply_markup=get_selection_buttons()
     )
 
 # BUTTON ADD
@@ -62,54 +26,41 @@ async def selection_menu(message: Message, state: FSMContext):
 async def button_add(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
 
-    user_data = await state.get_data() # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
-    file_id = user_data.get("photo_id")# TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМ
-    if file_id:
-        await download_photo(file_id=file_id, bot=bot)
-        await add_embedding(file_id=file_id, bot=bot)
-        await callback.message.answer("Фото було збережено!")
-        await state.clear()
-    else: 
-        await callback.message.answer("Щось зламалося! Будь ласка, надішліть фото ще раз.")
+    user_data = await state.get_data()
+    file_id = user_data.get("photo_id")
+
+    if not file_id:
+        await text_to_callback(callback=callback, text="Щось зламалося! Будь ласка, надішліть фото ще раз.")
+        return
+
+    await process_add_photo(file_id, bot)
+    await text_to_callback(callback=callback, text="Фото було збережено!")
+    await state.clear()
 
 # BUTTON SEARCH
 @select_router.callback_query(F.data == "button_search")
 async def button_search(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
+
+    user_data = await state.get_data()
+    file_id = user_data.get("photo_id")
+
+    if not file_id:
+        await text_to_callback(callback=callback, text="Щось зламалося! Будь ласка, надішліть фото ще раз.")
+        return
     
-    user_data = await state.get_data()  # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
-    file_id = user_data.get("photo_id") # TODO: ВИНЕСТИ ОТРИМАННЯ STATE ОКРЕМО 
-    if file_id:
-        results = await search_embedding(file_id=file_id, bot=bot) 
-        if results and results.points:
-            best_match = results.points[0]
+    result = await process_search_photo(file_id, bot)
 
-            if best_match.score < 0.60:
-                await callback.message.answer("Схоже, таких предметів у нас немає.")
-                return 
-
-            if best_match.payload is not None:
-                title = best_match.payload.get('title', 'Без назви') # TODO: ЗНАЧЕННЯ DEFAULT НЕ ПРАЦЮЄ
-                photo_path = best_match.payload.get('photo_path')
-
-                caption_text = (
-                    f"Знайдено збіг! {best_match.score * 100:.1f}%\n"
-                    f"Предмет: **{title}**"
-                )
-
-                if photo_path and Path(photo_path).exists():
-                    await callback.message.answer_photo(
-                        photo=FSInputFile(photo_path),
-                        caption=caption_text,
-                        parse_mode="Markdown"
-                    )
-                else: 
-                    await callback.message.answer(caption_text + "\n\n⚠️ Попередження: Фото оригіналу не знайдено на сервері.")
-            else: 
-                await callback.message.answer(f"🤖 Знайдено об'єкт з ID `{best_match.id}`, але він поржній!")
-        else:
-            await callback.message.answer("🤷‍♂️ Нічого не знайдено. Спробуйте сфоткати з іншого ракурсу.")
+    if result.get("photo_path"):
+        await photo_to_callback(
+            callback=callback,
+            photo=FSInputFile(result["photo_path"]),
+            caption=result["message"],
+            parse_mode="Markdown"
+        )
     else: 
-        await callback.message.answer("Щось зламалося! Будь ласка, надішліть фото ще раз.")
-    
-    # TODO: ЗАНАДТО БАГАТО IF ELSE
+        await text_to_callback(
+            callback=callback,
+            text=result["message"],
+            parse_mode="Markdown"
+        )

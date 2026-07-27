@@ -1,7 +1,8 @@
 import httpx 
+from config import config
 
 class EmbeddingApiClient:
-    def __init__(self, base_url: str = "http://127.0.0.1:8000"): 
+    def __init__(self, base_url: str = config.embedding_service_url): 
         self.base_url = base_url 
 
     async def get_image_embedding(self, image_bytes: bytes) -> list[float]:
