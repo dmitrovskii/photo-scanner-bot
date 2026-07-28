@@ -5,21 +5,41 @@ from aiogram.fsm.context import FSMContext
 from bot.utils import text_to_callback, photo_to_callback
 from bot.buttons import get_selection_buttons
 from bot.service import process_add_photo, process_search_photo
+from config import config
 
 select_router = Router()
 
 @select_router.message(F.photo)
-async def selection_menu(message: Message, state: FSMContext):
+async def handle_photo_input(message: Message, state: FSMContext, bot: Bot):
     if not message.photo:
         return
      
     largest_photo = message.photo[-1] 
-    await state.update_data(photo_id=largest_photo.file_id)
+    photo_id = largest_photo.file_id
+    
+    if message.from_user.id in config.admin_ids:
+        await state.update_data(photo_id=photo_id)
+        await message.answer(
+            text="Спіймав! Що робимо далі?",
+            reply_markup=get_selection_buttons()
+        )
+        return
 
-    await message.answer(
-        text="Спіймав! Що робимо далі?",
-        reply_markup=get_selection_buttons()
-    )
+    await message.answer("🔍 Шукаю найближчий збіг...")
+
+    result = await process_search_photo(file_id=photo_id, bot=bot)
+    
+    if result.get("photo_path"):
+        await message.answer_photo(
+            photo=FSInputFile(result["photo_path"]),
+            caption=result["message"],
+            parse_mode="Markdown"
+        )
+    else: 
+        await message.answer(
+            text=result["message"],
+            parse_mode="Markdown"
+        )
 
 # BUTTON ADD
 @select_router.callback_query(F.data == "button_add")
