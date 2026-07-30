@@ -55,5 +55,32 @@ async def search_items(vector: list, limit: int = 1):
     )
     return results
 
+async def get_items(limit: int = 20, offset=None):
+    records, next_offset = await client.scroll(
+        collection_name=COLLECTION_NAME,
+        limit=limit,
+        offset=offset,
+        with_payload=True,
+        with_vectors=False
+    )
+    
+    formatted_records = []
+    for r in records:
+        if r.payload is None:
+            continue
+
+        photo_path = r.payload.get("photo_path")
+        if not photo_path:
+            continue    
+
+        formatted_records.append({
+            "id": r.id,
+            "photo_path": r.payload.get("photo_path"),
+            "category": r.payload.get("category", "default"),
+            "created_at": r.payload.get("created_at") 
+        })
+
+    return formatted_records, next_offset
+
 async def close_db():
     await client.close()
