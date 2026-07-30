@@ -1,7 +1,8 @@
 import uuid
 from pathlib import Path
+from datetime import datetime, timezone
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
 
 from config import config
 
@@ -20,17 +21,28 @@ async def init_db():
             vectors_config=VectorParams(size=768, distance=Distance.COSINE),
         )
 
-async def add_item(tg_file_id: str, vector: list, photo_path: str | Path):
+    await client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="category",
+        field_schema=PayloadSchemaType.KEYWORD
+    )
+
+async def add_item(tg_file_id: str, vector: list, photo_path: str | Path, category: str = "default"):
     item_id = create_uuid(tg_file_id)
+
+    payload = {
+        "category": category,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "photo_path": photo_path      
+    }
+
     await client.upsert(
         collection_name=COLLECTION_NAME,
         points=[
             PointStruct(
                 id=item_id,
                 vector=vector,
-                payload={
-                    "photo_path": photo_path
-                }
+                payload=payload
             )
         ]
     )
