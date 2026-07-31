@@ -1,0 +1,28 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Core AI & ML
+torch==2.13.0
+torchvision==0.28.0
+transformers==5.12.1
+pillow==12.2.0
+numpy==2.5.0
+
+# Vector DB
+qdrant-client==1.18.0
+
+# Web Framework & Frontend
+nicegui==3.15.0
+fastapi==0.139.2
+uvicorn==0.51.0
+
+# Telegram Bot
+aiogram==3.29.0
+
+# Async & Networking
+httpx==0.28.1
+aiofiles==25.1.0
+
+# Settings & Configuration
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
