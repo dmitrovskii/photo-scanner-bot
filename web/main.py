@@ -2,12 +2,25 @@ from nicegui import ui
 
 from core.database import get_items
 
+MENU_ITEMS = [
+    {'label': 'Головна сторінка', 'icon': 'home', 'path': '/'},
+    {'label': 'Додати зображення', 'icon': 'add_photo_alternate', 'path': '/image/create'},
+    {'label': 'Гайд', 'icon': 'lightbulb', 'path': '/questions'},
+]
+
 def setup_layout():
-    with ui.header(elevated=True).classes('items-center justify-between'):
+    with ui.header(elevated=True).classes('items-center justify-start'):
+        ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
         ui.label("HEADER")
-        
-    with ui.left_drawer().props('bordered'):
-        ui.label('LEFT DRAWER')
+
+    with ui.left_drawer(fixed=False).classes('items-center p-2 space-y-1').props('bordered') as left_drawer:
+        ui.label('Меню навігації').classes('text-xm font-bold text-gray-600')
+
+        for item in MENU_ITEMS:
+            ui.button(item['label'], icon=item['icon']) \
+                .props('flat align=left color=grey-9') \
+                .classes('w-full justify-start rounded-lg px-3') \
+                .on('click', lambda _, p=item['path']: ui.navigate.to(p))
 
 class GalleryComponent:
     def __init__(self) -> None:
@@ -38,6 +51,14 @@ class GalleryComponent:
                     ui.image(item["photo_path"]) \
                         .classes('w-40 aspect-square cursor-pointer') \
                         .on('click', lambda img=item["photo_path"]: self.open_photo(img))
+
+@ui.page('/questions')
+async def questions_page():
+    setup_layout()
+
+@ui.page("/image/create")
+async def create_page():
+    setup_layout()
 
 @ui.page("/")
 async def control_page():
