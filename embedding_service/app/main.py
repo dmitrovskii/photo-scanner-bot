@@ -29,21 +29,20 @@ async def health(request: Request):
 
 
 @app.post("/v1/embeddings")
-async def generate_embedding(request: Request, file: UploadFile = File(...)):
+async def generate_embedding(request: Request, files: list[UploadFile] = File(...)):
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=400,
-            detail="Переданий файл не є зображенням"
-        )
+    for file in files:
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400,
+                detail="Переданий файл не є зображенням"
+            )
 
     try:
-        image_bytes = await file.read()
-        image = Image.open(BytesIO(image_bytes))
-        service = request.app.state.embedding_service
-        vector = service.get_image_embedding(image)
+        images = [Image.open(BytesIO(await f.read())) for f in files]
+        embeddings = request.app.state.embedding_service.get_image_embedding(images)
+        return {"embeddings": embeddings}
 
-        return {"vector": vector}
     except Exception as e: 
         raise HTTPException(
             status_code=500,
