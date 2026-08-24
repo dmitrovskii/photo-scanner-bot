@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from bot.utils import text_to_callback, photo_to_callback
 from bot.buttons import get_selection_buttons
 from bot.service import process_add_photo, process_search_photo
+from core.storage import get_photo_path
 from config import config
 
 select_router = Router()
@@ -30,8 +31,9 @@ async def handle_photo_input(message: Message, state: FSMContext, bot: Bot):
     result = await process_search_photo(file_id=photo_id, bot=bot)
     
     if result.get("photo_path"):
+        full_path = get_photo_path(result["photo_path"])
         await message.answer_photo(
-            photo=FSInputFile(result["photo_path"]),
+            photo=FSInputFile(full_path),
             caption=result["message"],
             parse_mode="Markdown"
         )

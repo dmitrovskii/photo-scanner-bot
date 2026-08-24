@@ -1,4 +1,3 @@
-import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from qdrant_client import AsyncQdrantClient
@@ -7,12 +6,7 @@ from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSch
 from config import config
 
 client = AsyncQdrantClient(url=config.qdrant_url)
-COLLECTION_NAME = "photo"
-
-def create_uuid(file_name: str) -> str:
-    clear_file_name = Path(file_name).stem
-    point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, clear_file_name))
-    return point_id
+COLLECTION_NAME = config.collection_name
 
 async def init_db():
     if not await client.collection_exists(COLLECTION_NAME):
@@ -27,8 +21,7 @@ async def init_db():
         field_schema=PayloadSchemaType.KEYWORD
     )
 
-async def add_item(tg_file_id: str, vector: list, photo_path: str | Path, category: str = "default"):
-    item_id = create_uuid(tg_file_id)
+async def add_item(item_id: str, vector: list[float], photo_path: str | Path, category: str = "default"):
 
     payload = {
         "category": category,
@@ -47,7 +40,7 @@ async def add_item(tg_file_id: str, vector: list, photo_path: str | Path, catego
         ]
     )
 
-async def search_items(vector: list, limit: int = 1):
+async def search_items(vector: list[float], limit: int = 1):
     results = await client.query_points(
         collection_name=COLLECTION_NAME,
         query=vector,

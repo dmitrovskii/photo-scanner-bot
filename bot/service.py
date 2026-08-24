@@ -2,23 +2,17 @@ from pathlib import Path
 from aiogram import Bot
 from core.database import add_item, search_items
 from core.api_client import EmbeddingApiClient
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-REF_DIR = BASE_DIR / "data" / "reference"
+from core.storage import save_photo_bytes
 
 api_client = EmbeddingApiClient()
 
-async def download_photo(file_id: str, bot: Bot) -> Path:
-    destination_path = REF_DIR / f"{file_id}.jpg"
-    destination_path.parent.mkdir(parents=True, exist_ok=True)    
-    await bot.download(file = file_id, destination=destination_path)
-    return destination_path
-
 async def process_add_photo(file_id: str, bot: Bot):
-    photo_path = await download_photo(file_id, bot)
     file_bytes = await bot.download(file=file_id)
-    vector = await api_client.get_image_embedding(image_bytes=file_bytes.read()) # type: ignore
-    await add_item(tg_file_id=file_id, vector=vector, photo_path=photo_path)
+    image_bytes = file_bytes.read() #type: ignore
+
+    item_id, photo_path = save_photo_bytes(image_bytes=image_bytes)
+    vector = await api_client.get_image_embedding(image_bytes=image_bytes) 
+    await add_item(item_id=item_id, vector=vector, photo_path=photo_path)
 
 async def process_search_photo(file_id: str, bot: Bot):
     file = await bot.download(file=file_id)
