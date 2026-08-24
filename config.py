@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     qdrant_url: str
     embedding_service_url: str = "http://127.0.0.1:8000"
     admin_ids: set[int] = set()
+    collection_name: str
 
     model_config = SettingsConfigDict(
         env_file=ENV,
