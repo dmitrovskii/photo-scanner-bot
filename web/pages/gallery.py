@@ -1,5 +1,6 @@
 from nicegui import ui
 from core.database import get_items
+from core.storage import get_photo_path
 
 class GalleryComponent:
     def __init__(self) -> None:
@@ -27,6 +28,7 @@ class GalleryComponent:
             items, next_offset = await get_items()
             for item in items:
                 with ui.card().tight().classes('no-shadow'):
-                    ui.image(item["photo_path"]) \
+                    image = get_photo_path(item["photo_path"])
+                    ui.image(image) \
                         .classes('w-40 aspect-square cursor-pointer') \
-                        .on('click', lambda img=item["photo_path"]: self.open_photo(img))
+                        .on('click', lambda img=image: self.open_photo(img))

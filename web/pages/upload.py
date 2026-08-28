@@ -1,9 +1,14 @@
 import base64
 from nicegui import ui
 
+from core.database import add_items
+from core.storage import save_photo_bytes
+from core.api_client import EmbeddingApiClient
+
 class UploadPage:
     def __init__(self) -> None:
         self.uploaded_photos = []
+        self.api_cleint = EmbeddingApiClient()
 
     @ui.refreshable
     def render_photo_cards(self):
@@ -22,9 +27,7 @@ class UploadPage:
                             ui.label(item['name']).classes("font-bold text-sm text-gray-700 truncate w-full")
                             
                             ui.input(
-                                placeholder="Додайте опис або теги...",
-                                value=item['description'],
-                                on_change=lambda e, i=idx: self.uploaded_photos[i].update({'description': e.value})
+                                placeholder="Тут мав бути опис, але він ще не готовий",
                             ).classes("w-full").props("dense clearable")
                         ui.button(icon="delete", on_click=lambda e, i=idx: self.delete_photo(i)).props("flat round color=negative")
 
@@ -37,25 +40,39 @@ class UploadPage:
         self.uploaded_photos.append({
             'name': e.file.name,
             'bytes': file_bytes,
-            'b64_src': b64_src,
-            'description': ''
+            'b64_src': b64_src
         })
 
         self.render_photo_cards.refresh()
 
-    def submit_all(self):
+    async def submit_all(self):
         if not self.uploaded_photos:
             ui.notify("Спочатку завантажте хоча б одне фото!", type="warning")
             return
 
-        # Відправка bytes у FastAPI (DINOv2)
-        # Запис у Qdrant
+        try:
+            images_bytes = [photo["bytes"] for photo in self.uploaded_photos]
+            vectors = await self.api_cleint.get_embeddings(images_bytes)
 
+            item_ids = []
+            photo_paths = []
+
+            for photo in self.uploaded_photos:
+                item_id, file_name = save_photo_bytes(photo["bytes"])
+                item_ids.append(item_id)
+                photo_paths.append(file_name)
+
+            await add_items(
+                item_ids=item_ids,
+                vectors=vectors,
+                photo_paths=photo_paths
+            )
+
+        except Exception:
+            pass
+        
         ui.notify(f"Успішно оброблено {len(self.uploaded_photos)} фото!", type="positive")
-
-        for photo in self.uploaded_photos:
-            print(f"Файл: {photo['name']} | Опис: {photo['description']} | Розмір: {len(photo['bytes'])} bytes")
-
+        
         self.cancell_all()
 
     def cancell_all(self):
