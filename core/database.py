@@ -25,7 +25,7 @@ async def add_item(item_id: str, vector: list[float], photo_path: str | Path, ca
 
     payload = {
         "category": category,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
         "photo_path": photo_path      
     }
 
