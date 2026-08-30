@@ -2,7 +2,7 @@ from pathlib import Path
 from aiogram import Bot
 from core.database import add_item, search_items
 from core.api_client import EmbeddingApiClient
-from core.storage import save_photo_bytes
+from core.storage import save_photo_bytes, get_photo_path
 
 api_client = EmbeddingApiClient()
 
@@ -31,17 +31,22 @@ async def process_search_photo(file_id: str, bot: Bot):
         return {"message": "Об'єкт існує, але дані про нього відсутні"}
 
     title = best_match.payload.get("title", "Без назви")
-    photo_path = best_match.payload.get("photo_path")
-
     caption_text = (
         f"Знайдено збіг! {best_match.score * 100:.1f}%\n"
         f"Предмет: **{title}**"
     )
 
-    valid_photo = photo_path if photo_path and Path(photo_path).exists() else None
-    if photo_path and not valid_photo:
-        caption_text += "\n\n⚠️ Попередження: Фото оригіналу не знайдено на сервері."
+    temp_path = best_match.payload.get("photo_path")
+    valid_photo: Path | None = None
 
+    if isinstance(temp_path, str) and temp_path.strip():
+        resolved_path = get_photo_path(temp_path)
+        if resolved_path.exists():
+            valid_photo = resolved_path
+
+    if not valid_photo: 
+        caption_text += "\n\n⚠️ Попередження: Фото оригіналу не знайдено на сервері."
+    
     return {
         "message": caption_text,
         "photo_path": valid_photo
