@@ -25,7 +25,7 @@ async def add_item(item_id: str, vector: list[float], photo_path: str | Path, ca
 
     payload = {
         "category": category,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "photo_path": photo_path      
     }
 
@@ -49,7 +49,7 @@ async def add_items(
     if not (len(item_ids) == len(vectors) == len(photo_paths)):
         raise ValueError("Довжини списків IDs, векторів та шляхів мають збігатися")
 
-    dtnow = datetime.now(timezone.utc).isoformat(),
+    dtnow = datetime.now(timezone.utc).isoformat()
 
     points = [
         PointStruct(
