@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime, timezone
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
+from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType, PointIdsList, ExtendedPointId
 
 from config import config
 
@@ -72,6 +72,16 @@ async def search_items(vector: list[float], limit: int = 1):
         limit=limit
     )
     return results
+
+async def delete_items(item_ids: list[str]) -> None:
+    if not item_ids:
+        return
+
+    points: list[ExtendedPointId] = list(item_ids)
+    await client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=PointIdsList(points=points)
+    )
 
 async def get_items(limit: int = 20, offset=None):
     records, next_offset = await client.scroll(
