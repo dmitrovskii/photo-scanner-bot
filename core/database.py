@@ -21,24 +21,19 @@ async def init_db():
         field_schema=PayloadSchemaType.KEYWORD
     )
 
-async def add_item(item_id: str, vector: list[float], photo_path: str | Path, category: str = "default"):
-
-    payload = {
-        "category": category,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "photo_path": photo_path      
-    }
-
-    await client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=[
-            PointStruct(
-                id=item_id,
-                vector=vector,
-                payload=payload
-            )
-        ]
+async def add_item(
+        item_id: str, 
+        vector: list[float], 
+        photo_path: str | Path, 
+        category: str = "default"
+) -> None:
+    await add_items(
+        item_ids=[item_id],
+        vectors=[vector],
+        photo_paths=[photo_path],
+        category=category
     )
+
 
 async def add_items(
         item_ids: list[str],
