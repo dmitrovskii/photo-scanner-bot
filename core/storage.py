@@ -15,3 +15,9 @@ def save_photo_bytes(image_bytes: bytes, extension: str = ".jpg") -> tuple[str, 
 
 def get_photo_path(file_name: str) -> Path:
     return STORAGE_DIR / file_name
+
+def delete_photo_files(photo_paths: list[str]) -> None:
+    for path in photo_paths:
+        target = get_photo_path(path)
+        target.unlink(missing_ok=True)
+        

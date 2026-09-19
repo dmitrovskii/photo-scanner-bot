@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime, timezone
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
+from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType, PointIdsList, ExtendedPointId
 
 from config import config
 
@@ -21,24 +21,19 @@ async def init_db():
         field_schema=PayloadSchemaType.KEYWORD
     )
 
-async def add_item(item_id: str, vector: list[float], photo_path: str | Path, category: str = "default"):
-
-    payload = {
-        "category": category,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "photo_path": photo_path      
-    }
-
-    await client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=[
-            PointStruct(
-                id=item_id,
-                vector=vector,
-                payload=payload
-            )
-        ]
+async def add_item(
+        item_id: str, 
+        vector: list[float], 
+        photo_path: str | Path, 
+        category: str = "default"
+) -> None:
+    await add_items(
+        item_ids=[item_id],
+        vectors=[vector],
+        photo_paths=[photo_path],
+        category=category
     )
+
 
 async def add_items(
         item_ids: list[str],
@@ -77,6 +72,16 @@ async def search_items(vector: list[float], limit: int = 1):
         limit=limit
     )
     return results
+
+async def delete_items(item_ids: list[str]) -> None:
+    if not item_ids:
+        return
+
+    points: list[ExtendedPointId] = list(item_ids)
+    await client.delete(
+        collection_name=COLLECTION_NAME,
+        points_selector=PointIdsList(points=points)
+    )
 
 async def get_items(limit: int = 20, offset=None):
     records, next_offset = await client.scroll(
