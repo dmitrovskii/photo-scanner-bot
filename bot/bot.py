@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
@@ -21,10 +20,12 @@ async def cmd_start(message: Message):
 async def main():
     await init_db()
     print(">>> Start...")
+    
     try:
         await dp.start_polling(bot)
     finally:
         print(">>> Stop.")
         await close_db()
+
 if __name__ == "__main__":
     asyncio.run(main())
