@@ -30,7 +30,7 @@ async def process_search_photo(file_id: str, bot: Bot):
     if not best_match.payload:
         return {"message": "Об'єкт існує, але дані про нього відсутні"}
 
-    title = best_match.payload.get("title", "Без назви")
+    title = best_match.payload.get("description", "Без опису")
     caption_text = (
         f"Знайдено збіг! {best_match.score * 100:.1f}%\n"
         f"Предмет: **{title}**"

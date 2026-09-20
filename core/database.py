@@ -21,25 +21,13 @@ async def init_db():
         field_schema=PayloadSchemaType.KEYWORD
     )
 
-async def add_item(
-        item_id: str, 
-        vector: list[float], 
-        photo_path: str | Path, 
-        category: str = "default"
-) -> None:
-    await add_items(
-        item_ids=[item_id],
-        vectors=[vector],
-        photo_paths=[photo_path],
-        category=category
-    )
-
 
 async def add_items(
         item_ids: list[str],
         vectors: list[list[float]],
         photo_paths: list[str | Path],
         category: str = "default",
+        descriptions: list[str] | None = None,
 ):
     if not (len(item_ids) == len(vectors) == len(photo_paths)):
         raise ValueError("Довжини списків IDs, векторів та шляхів мають збігатися")
@@ -54,16 +42,34 @@ async def add_items(
                 "category": category,
                 "created_at": dtnow,
                 "photo_path": str(photo_path), 
+                "description": desc
             },
         )
-        for item_id, vector, photo_path in zip(
-            item_ids, vectors, photo_paths 
+        for item_id, vector, photo_path, desc in zip(
+            item_ids, vectors, photo_paths, descriptions
         )
     ]
     await client.upsert(
         collection_name=COLLECTION_NAME,
         points=points,
     )
+
+
+async def add_item(
+        item_id: str, 
+        vector: list[float], 
+        photo_path: str | Path, 
+        category: str = "default",
+        descriptions: str = ""
+) -> None:
+    await add_items(
+        item_ids=[item_id],
+        vectors=[vector],
+        photo_paths=[photo_path],
+        category=category,
+        descriptions=[descriptions]
+    )
+
 
 async def search_items(vector: list[float], limit: int = 1):
     results = await client.query_points(
