@@ -3,7 +3,7 @@ import asyncio
 from config import config
 
 class EmbeddingApiClient:
-    def __init__(self, base_url: str = config.embedding_service_url, max_concurrent_requests: int = 8): 
+    def __init__(self, base_url: str = config.embedding_service_url, max_concurrent_requests: int = 1): 
         self.base_url = base_url
         self.semaphore = asyncio.Semaphore(max_concurrent_requests) 
 
@@ -19,8 +19,8 @@ class EmbeddingApiClient:
 
         async with self.semaphore:
             async with httpx.AsyncClient(base_url=self.base_url) as client:
-                responce = await client.post("/v1/embeddings", files=files, timeout=60.0)
-                responce.raise_for_status()
+                response = await client.post("/v1/embeddings", files=files, timeout=60.0)
+                response.raise_for_status()
 
-                data = responce.json()
+                data = response.json()
                 return data["embeddings"]

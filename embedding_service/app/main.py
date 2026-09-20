@@ -1,7 +1,11 @@
-from io import BytesIO
-from PIL import Image
+import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from io import BytesIO
+
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from PIL import Image
+from starlette.concurrency import run_in_threadpool
+
 from embedding_service.app.models import EmbeddingService
 
 @asynccontextmanager
@@ -15,6 +19,7 @@ async def lifespan(app: FastAPI):
     app.state.embedding_service.unload_model()
 
 app = FastAPI(lifespan=lifespan)
+semaphore = asyncio.Semaphore()
 
 @app.get("/health")
 async def health(request: Request):
@@ -40,7 +45,11 @@ async def generate_embedding(request: Request, files: list[UploadFile] = File(..
 
     try:
         images = [Image.open(BytesIO(await f.read())) for f in files]
-        embeddings = request.app.state.embedding_service.get_image_embedding(images)
+        async with semaphore:
+            embeddings = await run_in_threadpool(
+                request.app.state.embedding_service.get_image_embedding,
+                images
+            )
         return {"embeddings": embeddings}
 
     except Exception as e: 
