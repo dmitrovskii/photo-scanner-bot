@@ -1,14 +1,22 @@
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType, PointIdsList, ExtendedPointId
+from qdrant_client.models import (
+    Distance,
+    PayloadSchemaType,
+    PointIdsList,
+    PointStruct,
+    VectorParams,
+)
 
 from config import config
 
 client = AsyncQdrantClient(url=config.qdrant_url)
 COLLECTION_NAME = config.collection_name
 
-async def init_db():
+async def init_db() -> None:
     if not await client.collection_exists(COLLECTION_NAME):
         await client.create_collection(
             collection_name=COLLECTION_NAME,
@@ -40,7 +48,7 @@ async def add_items(
         vectors: list[list[float]],
         photo_paths: list[str | Path],
         category: str = "default",
-):
+) -> None:
     if not (len(item_ids) == len(vectors) == len(photo_paths)):
         raise ValueError("Довжини списків IDs, векторів та шляхів мають збігатися")
 
@@ -65,7 +73,8 @@ async def add_items(
         points=points,
     )
 
-async def search_items(vector: list[float], limit: int = 1):
+
+async def search_items(vector: list[float], limit: int = 1) -> Any:
     results = await client.query_points(
         collection_name=COLLECTION_NAME,
         query=vector,
@@ -73,17 +82,20 @@ async def search_items(vector: list[float], limit: int = 1):
     )
     return results
 
+
 async def delete_items(item_ids: list[str]) -> None:
     if not item_ids:
         return
 
-    points: list[ExtendedPointId] = list(item_ids)
     await client.delete(
         collection_name=COLLECTION_NAME,
-        points_selector=PointIdsList(points=points)
+        points_selector=PointIdsList(points=points) # type: ignore
     )
 
-async def get_items(limit: int = 20, offset=None):
+
+async def get_items(
+        limit: int = 20, offset: Any = None
+        ) -> tuple[list[dict[str, Any]], Any]:
     records, next_offset = await client.scroll(
         collection_name=COLLECTION_NAME,
         limit=limit,
@@ -109,6 +121,7 @@ async def get_items(limit: int = 20, offset=None):
         })
 
     return formatted_records, next_offset
+
 
 async def close_db():
     await client.close()
