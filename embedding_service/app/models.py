@@ -1,15 +1,15 @@
-import os
-
-os.environ["HF_HUB_OFFLINE"] = "1"
-os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
-
 import gc
-import torch
-import psutil
 import logging
+
 from PIL import Image
+import psutil
+import torch
 from transformers import AutoImageProcessor, AutoModel
+from transformers import logging as tlog
+
 from embedding_service.config import config 
+
+tlog.set_verbosity_error()
 
 class EmbeddingService:
     def __init__(self, model_name=config.model_name):
