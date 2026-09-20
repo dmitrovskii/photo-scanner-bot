@@ -32,9 +32,15 @@ class UploadPage:
                             ui.label(item['name']).classes("font-bold text-sm text-gray-700 truncate w-full")
                             
                             ui.input(
-                                placeholder="Тут мав бути опис, але він ще не готовий",
+                                placeholder="Додайте назву або опис...",
+                                value=item['description'],
+                                on_change=lambda e, i=idx: self.uploaded_photos[i].update({'description': e.value}) 
                             ).classes("w-full").props("dense clearable")
-                        ui.button(icon="delete", on_click=lambda e, i=idx: self.delete_photo(i)).props("flat round color=negative")
+
+                        ui.button(
+                            icon="delete", 
+                            on_click=lambda e, i=idx: self.delete_photo(i)
+                        ).props("flat round color=negative")
 
     async def handle_upload(self, e):
         file_size = e.file.size()
@@ -48,7 +54,8 @@ class UploadPage:
         self.uploaded_photos.append({
             'name': e.file.name,
             'bytes': file_bytes,
-            'b64_src': thumb_b64
+            'b64_src': thumb_b64,
+            'description': ''
         })
 
         self.render_photo_cards.refresh()
@@ -72,25 +79,28 @@ class UploadPage:
 
             item_ids = []
             photo_paths = []
+            descriptions = []
 
             for photo in self.uploaded_photos:
                 item_id, file_name = save_photo_bytes(photo["bytes"])
                 item_ids.append(item_id)
                 photo_paths.append(file_name)
-
+                descriptions.append(photo.get("description", ""))
+                
             await add_items(
                 item_ids=item_ids,
                 vectors=vectors,
-                photo_paths=photo_paths
+                photo_paths=photo_paths,
+                descriptions=descriptions
             )
 
-        except Exception:
-            pass
-        
-        ui.notify(f"Успішно оброблено {len(self.uploaded_photos)} фото!", type="positive")
-        
-        self.cancell_all()  
+            ui.notify(f"Успішно оброблено {len(self.uploaded_photos)} фото!", type="positive")
 
+            self.cancell_all()  
+
+        except Exception as e:
+            ui.notify(f"Помилка збереження: {e}", type="negative")
+            
     def cancell_all(self):
         self.uploaded_photos.clear()
         self.render_photo_cards.refresh()
