@@ -1,4 +1,7 @@
+import io
 import base64
+
+from PIL import Image
 from nicegui import ui
 
 from core.database import add_items
@@ -9,6 +12,8 @@ class UploadPage:
     def __init__(self) -> None:
         self.uploaded_photos = []
         self.api_cleint = EmbeddingApiClient()
+        self.MAX_MB = 100
+        self.MAX_BYTES = self.MAX_MB * 1024 * 1024
 
     @ui.refreshable
     def render_photo_cards(self):
@@ -32,18 +37,29 @@ class UploadPage:
                         ui.button(icon="delete", on_click=lambda e, i=idx: self.delete_photo(i)).props("flat round color=negative")
 
     async def handle_upload(self, e):
-        file_bytes = await e.file.read()
+        file_size = e.file.size()
+        if file_size > self.MAX_BYTES:
+            ui.notify(f"Файл {e.file.name} перевищує ліміт у 100 МБ", type="negative")
+            return
 
-        b64_encoded = base64.b64encode(file_bytes).decode('utf-8')
-        b64_src = f"data:{e.file.content_type};base64,{b64_encoded}"
+        file_bytes = await e.file.read()
+        thumb_b64 = self.make_thumbnail_b64(file_bytes)    
 
         self.uploaded_photos.append({
             'name': e.file.name,
             'bytes': file_bytes,
-            'b64_src': b64_src
+            'b64_src': thumb_b64
         })
 
         self.render_photo_cards.refresh()
+
+    def make_thumbnail_b64(self, file_bytes: bytes, size: tuple[int, int] = (120, 120)) -> str:
+        with Image.open(io.BytesIO(file_bytes)) as img: 
+            img.thumbnail(size)
+            buffer = io.BytesIO()
+            img.convert("RGB").save(buffer, format="JPEG", quality=70)
+            encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            return f"data:image/jpeg;base64,{encoded}" 
 
     async def submit_all(self):
         if not self.uploaded_photos:
@@ -73,7 +89,7 @@ class UploadPage:
         
         ui.notify(f"Успішно оброблено {len(self.uploaded_photos)} фото!", type="positive")
         
-        self.cancell_all()
+        self.cancell_all()  
 
     def cancell_all(self):
         self.uploaded_photos.clear()
@@ -89,10 +105,13 @@ class UploadPage:
             with ui.column().classes("w-1/3 min-w-[280px]"):
                 ui.upload(
                     label="Перетягніть сюди фото",
-                    multiple=True,          
-                    max_files=8,            
+                    multiple=True,              
                     auto_upload=True,       
-                    on_upload=self.handle_upload
+                    on_upload=self.handle_upload,
+                    max_file_size=self.MAX_BYTES,
+                    max_total_size=self.MAX_BYTES,
+                    on_rejected= lambda: ui.notify(f"Файл занадто великий! Максимум {self.MAX_MB} МБ", type="negative")
+
                 ).classes("w-full").props('accept=image/*')
     
                 ui.button("Зберегти в галерею", on_click=self.submit_all) \
@@ -103,4 +122,3 @@ class UploadPage:
             with ui.column().classes("w-full flex-grow"):
                 ui.label("Завантажені файли:").classes("text-lg font-semibold")
                 self.render_photo_cards() #type: ignore 
-
