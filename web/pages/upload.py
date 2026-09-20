@@ -100,7 +100,7 @@ class UploadPage:
 
         except Exception as e:
             ui.notify(f"Помилка збереження: {e}", type="negative")
-
+            
     def cancell_all(self):
         self.uploaded_photos.clear()
         self.render_photo_cards.refresh()
