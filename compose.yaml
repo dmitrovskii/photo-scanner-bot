@@ -9,6 +9,20 @@ services:
     volumes:
       - ./data/qdrant_storage:/qdrant/storage:z
 
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    container_name: telegram-bot
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+      - embedding-service
+    env_file:
+      - .env
+    volumes:
+      - ./data/reference:/app/data/reference    
+
   embedding-service:
     build: 
       context: ./embedding_service
