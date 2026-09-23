@@ -6,7 +6,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from PIL import Image
 from starlette.concurrency import run_in_threadpool
 
-from embedding_service.app.models import EmbeddingService
+from app.models import EmbeddingService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

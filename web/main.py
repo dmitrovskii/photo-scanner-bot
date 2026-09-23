@@ -21,4 +21,4 @@ async def control_page():
     gallery = GalleryComponent()
     await gallery.render() # type: ignore
 
-ui.run()
+ui.run(host="0.0.0.0", port=8080, title="Photo Scanner")

@@ -5,6 +5,7 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     Distance,
+    ExtendedPointId,
     PayloadSchemaType,
     PointIdsList,
     PointStruct,
@@ -92,9 +93,10 @@ async def delete_items(item_ids: list[str]) -> None:
     if not item_ids:
         return
 
+    points: list[ExtendedPointId] = list(item_ids)
     await client.delete(
         collection_name=COLLECTION_NAME,
-        points_selector=PointIdsList(points=points) # type: ignore
+        points_selector=PointIdsList(points=points)
     )
 
 

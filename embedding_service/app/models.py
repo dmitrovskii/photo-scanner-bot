@@ -7,7 +7,7 @@ import torch
 from transformers import AutoImageProcessor, AutoModel
 from transformers import logging as tlog
 
-from embedding_service.config import config 
+from config import config 
 
 tlog.set_verbosity_error()
 
