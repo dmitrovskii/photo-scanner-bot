@@ -8,3 +8,20 @@ services:
       - "127.0.0.1:6334:6334" # gRPC API
     volumes:
       - ./data/qdrant_storage:/qdrant/storage:z
+
+  embedding-service:
+    build: 
+      context: ./embedding_service
+      dockerfile: Dockerfile
+    container_name: embedding-service
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      
+volumes:
+  qdrant_storage:
+  hf_cache:
